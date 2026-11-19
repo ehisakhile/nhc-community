@@ -1,0 +1,42 @@
+# Run NHC Community on one machine: a clinic's own server or a small cloud VM.
+# See deploy/README.md. Settings come from ../.env (copy .env.example first).
+services:
+  app:
+    build: ..
+    env_file: ../.env
+    environment:
+      DB_HOST: db
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Laravel's scheduler: visit reminders and expiring unconfirmed requests (routes/console.php).
+  scheduler:
+    build: ..
+    env_file: ../.env
+    environment:
+      DB_HOST: db
+    restart: unless-stopped
+    command: ["php", "artisan", "schedule:work"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-nhc_central}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${DB_PASSWORD}"]
+      interval: 5s
+      retries: 20
+
+volumes:
+  db-data:

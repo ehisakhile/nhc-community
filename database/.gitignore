@@ -1,0 +1,4 @@
+*.sqlite*
+
+# Hospital databases created by tenancy on SQLite (tests, local demos)
+nhc_facility_*
